@@ -1,0 +1,1 @@
+wget -O nexus.tar.gz https://download.sonatype.com/nexus/3/latest-unix.tar.gz

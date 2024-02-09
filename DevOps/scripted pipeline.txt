@@ -1,0 +1,34 @@
+scripted pipeline:-
+pipeline{
+agent{
+node{
+label "dev"  --> slave server name
+   }
+}
+  stages{
+    stage('Code'){
+        git "https://github.com/rbu9032/one.git"
+    }
+    stage('Build'){
+        def mavenHome = tool name: "maven", type: "maven"
+        def mavenCMD = "${mavenHome}/bin/mvn"
+        sh "${mavenCMD} clean package"
+    }
+    stage('CQA'){
+        withSonarQubeEnv('sonarQube'){
+            def mavenHome = tool name: "maven", type: "maven"
+            def mavenCMD = "${mavenHome}/bin/mvn"
+            sh "${mavenCMD} sonar:sonar"
+        }
+        
+    }
+    stage('Artifact'){
+        nexusArtifactUploader artifacts: [[artifactId: 'myweb', classifier: '', file: 'target/myweb-8.5.7.war', type: 'war']], credentialsId: 'nexus', groupId: 'in.javahome', nexusUrl: '34.203.249.147:8081/', nexusVersion: 'nexus3', protocol: 'http', repository: 'flm-repo', version: '8.5.7'
+    }
+    stage('Deploy'){
+        sshagent(['slave']) {
+        sh 'scp -o StrictHostKeyChecking=no target/myweb-8.5.7.war ec2-user@3.92.76.109:/home/ec2-user/apache-tomcat-9.0.85/webapps/swiggy.war'
+        }
+    }
+}
+}

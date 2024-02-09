@@ -1,0 +1,52 @@
+- hosts: dev, prod
+  connection: ssh
+
+- name: install git
+  yum: name=git state=present
+
+- name: maven dependency
+  yum: name=java-1.8.0 state=present
+
+- name: install maven
+  yum: name=maven state=present
+
+- name: get source code
+  git:
+    repo: "https://github.com/rbu9032/one.git"
+    version: "master"
+    dest: "deploy"
+
+- name: build code
+  command: mvn clean package
+  args:
+    chdir: "deploy"
+
+- name: install tomcat dependency
+  command: amazon-linux-extras install java-openjdk11 -y
+
+- name: download tomcat file
+  get_url:
+    url: "https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.85/bin/apache-tomcat-9.0.85.tar.gz"
+    dest: "/root"
+
+- name: untart the tomcat
+  command: tar -zxvf apache-tomcat-9.0.85.tar.gz
+
+- name: rename the tomcat folder
+  command: mv apache-tomcat-9.0.85 tomcat
+
+- name: replace context.xml
+  copy:
+    src: "/root/context.xml"
+    dest: "/root/tomcat/webapps/manager/META-INF/context.xml"
+
+- name: replace tomcat-users.xml
+  copy:
+    src: "/root/tomcat-users.xml"
+    dest: "/root/tomcat/conf/tomcat-users.xml"
+
+- name: start tomcat server
+  shell: nohup /root/tomcat/bin/startup.sh
+
+- name: deploy war file to tomcat server
+  command: cp /root/deploy/target/myweb-8.5.7.war /root/tomcat/webapps

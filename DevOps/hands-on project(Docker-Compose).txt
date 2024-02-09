@@ -1,0 +1,28 @@
+ yum install java-1.8.0-openjdk maven -y
+   37  mvn clean package
+   38  ll
+   39  cd target/
+   40  ll
+   41  cd ../
+   42  cp -r target/* Docker-app/
+   43  ll
+   44  cd Docker-app
+   45  ll
+   46  rm -rf classes/ generated-sources/ jacoco.exec  maven-archiver/ multistage/ surefire surefire-reports/ test-classes/ vprofile-v2 vprofile-v2.war
+   47  ll
+   48  cd ../
+   49  cp -r target/ Docker-app/
+   50  cd Docker-app/
+   51  ll
+   52  docker buil -t myapp .
+   53  docker build -t myapp .
+   54  cd ../
+   55  cd Docker-db/
+   56  ll
+   57  vim db_backup.sql
+   58  vim Dockerfile
+   59  docker build -t database .
+   60  docker run -d --name devopsdb -p 3306:3306 -e MYSQL_ROOT_PASSWORD=devopspassword database
+   61  docker ps
+   62  docker run --name devopsapp --link devopsdb:mysqlcon -d -p 8089:8080 myapp
+   63  docker ps
