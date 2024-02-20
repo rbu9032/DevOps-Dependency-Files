@@ -1,0 +1,27 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swiggy
+  template:
+    metadata:
+      labels:
+        app: swiggy
+    spec:
+      containers:
+        - name: cont-1
+          image: centos
+          command: ["/bin/bash", "-c", "sleep 1000"]
+          volumeMounts:
+            - name: rbu-volume
+              mountPath: "/tmp/mydata"
+      volumes:
+        - name: rbu-volume
+          persistentVolumeClaim:
+            claimName: rb-pvc
+
