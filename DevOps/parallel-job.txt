@@ -1,0 +1,17 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-parallel
+spec:
+  parallelism: 3
+  activeDeadlineSeconds: 10
+  template:
+    metadata:
+      name: test-job
+    spec:
+      containers:
+        - name: cont-2
+          image: ubuntu
+          command: ["/bin/bash", "-c", "mkdir folder-1; sleep 30"]
+      restartPolicy: Never

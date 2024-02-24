@@ -1,0 +1,34 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swiggy
+  template:
+    metadata:
+      labels:
+        app: swiggy
+    spec:
+      initContainers:
+        - name: init-cont
+          image: ubuntu
+          command: ["/bin/bash", "-c", "echo Welcome to init-cont > /tmp/my-volume/devops; sleep 20"]
+          volumeMounts:
+            - name: my-volume
+              mountPath: "/tmp/my-volume"
+
+      containers:
+        - name: cont-1
+          image: ubuntu
+          command: ["/bin/bash", "-c", "while true; do echo 'cat  /tmp/my-volume/devops'; sleep 10; done"]
+          volumeMounts:
+            - name: my-volume
+              mountPath: "/tmp/my-volume"
+
+      volumes:
+        - name: my-volume
+          emptyDir: {}

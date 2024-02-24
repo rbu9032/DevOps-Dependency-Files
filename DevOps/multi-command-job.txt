@@ -1,0 +1,22 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-1
+spec:
+  template:
+    metadata:
+      name: test-job
+    spec:
+      containers:
+        - name: cont-123
+          image: ubuntu
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              sudo update -y
+              touch raghu
+              mkdir nri
+              sleep 100
+      restartPolicy: Never
+~
