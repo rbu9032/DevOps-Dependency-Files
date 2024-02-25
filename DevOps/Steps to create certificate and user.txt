@@ -1,0 +1,44 @@
+Steps to create certificate
+• Create a folder:mkdir mustafa-user && cd mustafa-user
+
+• Generate a key using openssl : openssl genrsa -out rbu.key 2048
+
+Generate a Client Sign Request (CSR): openssl req -new -key rbu.key -out rbu.csr -subj "/CN=rbu/O=group1"
+
+• Generate the certificate (CRT): openssl x509 -req -in rbu.csr -CA ~/.minikube/ca.crt
+
+-CAkey ~/.minikube/ca.key-CAcreateserial -out rbu.crt -days 500
+
+Steps to create user.
+• lets create a user: kubectl config set-credentials rbu --client-certificate=rbu.crt --client-key=rbu.key
+
+=================================================
+Creating a role
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dev
+  namespace: dev-ns
+rules:
+  - apiGroups: ["*"]
+    resources: ["pods","deployments"]
+    verbs: ["get","list","watch","create","delete"]
+~
+==================================================
+Attaching a role to user
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dev-rolebinding
+  namespace: dev-ns
+subjects:
+  - kind: User
+    name: rbu
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: dev
+  apiGroup: rbac.authorization.k8s.io
+
