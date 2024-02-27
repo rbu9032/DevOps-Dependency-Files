@@ -1,0 +1,78 @@
+pipeline{
+    agent any
+    tools{
+        jdk 'jdk17'
+        nodejs 'Node16'
+    }
+    environment{
+        SCANNER_HOME=tool 'mysonar'
+    }
+    stages{
+        stage('Clean WS'){
+            steps{
+                cleanWs()
+            }
+        }
+        stage('code'){
+            steps{
+                git "https://github.com/rbu9032/k8s-project.git"
+            }
+        }
+        stage('COA'){
+            steps{
+                withSonarQubeEnv('mysonar') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=mygame \
+                    -Dsonar.projectKey=mygame '''
+                }
+            }
+        }
+        stage("Quality Gates"){
+            steps{
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'mysonar'
+                }
+            }
+        }
+        stage('Install Dependency'){
+            steps{
+                sh 'npm install'
+            }
+        }
+        stage('OWASP'){
+            steps{
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+        stage('Trivy'){
+            steps{
+                sh 'trivy fs . > trivyfs.txt'
+            }
+        }
+        stage('Build'){
+            steps{
+                sh 'docker build -t rbu9032/k8s-mygame:mygame-image .'
+            }
+        }
+        stage('Image scan'){
+            steps{
+                sh 'trivy image rbu9032/k8s-mygame:mygame-image'
+            }
+        }
+        stage('Push'){
+            steps{
+                script{
+                    withDockerRegistry(credentialsId: 'docker-password') {
+                        sh 'docker push rbu9032/k8s-mygame:mygame-image'
+                    }
+                }    
+            }
+        }
+        stage('Deploy'){
+            steps{
+                sh 'docker run -d --name game-1 -p 3000:3000 rbu9032/k8s-mygame:mygame-image'
+            }
+        }
+    }
+    
+}
