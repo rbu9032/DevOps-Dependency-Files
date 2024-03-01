@@ -1,0 +1,92 @@
+Nagios setup:
+
+Ubuntu:
+
+Pre-requesties:
+apt update -y
+apt install unzip vim gcc openssl build-essential libgd-dev libssl-dev libapache2-mod-php php-gd php apache2
+---------------------------
+
+Install Nagios core:
+export VER="4.4.6"
+curl -SL https://github.com/NagiosEnterprises/nagioscore/releases/download/nagios-$VER/nagios-$VER.tar.gz | tar -xzf -
+cd nagios-4.4.6/
+execute configure file : sh configure or ./configure
+make all
+make install-groups-users
+usermod -a -G nagios www-data
+make install
+make install-init
+make install-config
+make install-commandmode
+make install-webconf
+
+a2enmod rewrite cgi
+systemct restart apache2
+
+make install-exfoliation
+make install-classicui
+-------------------------------
+
+cd 
+VER="2.3.3"
+---------------------------
+To get nagios plugins:
+
+curl -SL https://github.com/nagios-plugins/nagios-plugins/releases/download/release-$VER/nagios-plugins-$VER.tar.gz | tar -xzf -
+cd nagios-plugins-2.3.3/
+execute configure file : sh configure or ./configure
+make install
+
+Create a nagios admin account for logging into the Nagios wen interface. Note the password you need
+
+sudo htpasswd -c /usr/local/nagios/etc/htpasswd.users nagiosadmin
+sudo service apache2 restart
+
+sudo /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+
+systemctl enable --now nagios
+systemctl status nagios
+
+
+Connect to Nagios Dashboard: public-ip/nagios
+-------------------------------------
+CLIENT SERVER:
+
+sudo apt update -y
+sudo -i
+
+apt install nagios-plugins nagios-nrpe-server
+systemctl status nagios-nrpe-server
+
+vim /etc/nagios/nrpe.cfg  (Nagios server public ip)
+systemctl restart nagios-nrpe-server
+/usr/sbin/nrpe -V /etc/nagios/nrpe.cfg -f
+
+--------------------------------------------
+
+NAGIOS SERVER:
+sudo vim /usr/local/nagios/etc/nagios.cfg 
+uncomment    line -51 #cfg_dir=/usr/local/nagios/etc/servers
+
+
+sudo mkdir -p /usr/local/nagios/etc/servers
+sudo vim /usr/local/nagios/etc/servers/host.cfg
+
+define host{
+        use                               linux-server
+        host_name                         server-name (user defined)
+        alias                             Apache server
+        address                           client-server public-ip address
+        max_check_attempts                5
+        check_period                      24x7
+        notification_interval             30
+        notification_period               24x7
+}
+
+systemctl restart nagios
+ufw allow 5666/tcp
+ufw reload
+ufw status
+
+sudo /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
