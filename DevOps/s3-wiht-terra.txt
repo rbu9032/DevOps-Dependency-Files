@@ -1,0 +1,35 @@
+Creating S3 bucket using terraform
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_s3_bucket" "one" {
+  bucket = "terra.rbu"
+}
+resource "aws_s3_bucket_ownership_controls" "two" {
+  bucket = aws_s3_bucket.one.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+resource "aws_s3_bucket_acl" "three" {
+  depends_on = [ aws_s3_bucket_ownership_controls.two ]
+  bucket = aws_s3_bucket.one.id
+  acl = "private"
+}
+resource "aws_s3_bucket_versioning" "four" {
+  bucket = aws_s3_bucket.one.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+======================================
+s3 for storing terraform.tfstate file
+
+terraform {
+  backend "s3" {
+    bucket = "terra.rbu"
+    key = "statefiles/terraform.tfstate"
+    region = "us-east-1"
+  }
+}

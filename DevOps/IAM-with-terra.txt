@@ -1,0 +1,23 @@
+Creating IAM users with terra
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_iam_user" "one" {
+  name = "user-with-terra"
+}
+================================
+Creating multiple IAM users with terra
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_iam_user" "one" {
+    count = length(var.abc)
+  name = var.abc[count.index]
+}
+variable "abc" {
+  type = list(string)
+  default = [ "user-1", "user-2", "user-3" ]
+}
+

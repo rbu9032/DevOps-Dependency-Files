@@ -1,0 +1,143 @@
+Creating an EC2 with Terraform
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  tags = {
+    Name = "Instance-Name"
+    Environment = "Dev"
+    Project = "Swiggy"
+  }
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  key_name = "key2"
+  availability_zone = "us-east-1d"
+  root_block_device {
+    volume_size = 10
+  }
+  count = 2
+}
+
+key_name, availability_zone, and root_block_device are optional
+===============================================================
+
+Terraform creating instance with variables
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  tags = {
+    Name = var.iname
+    
+  }
+  ami = var.ami-id
+  instance_type = var.itype
+  
+  count = var.icount
+}
+variable "iname" {
+  description = "This will assign name to the instance"
+  type = string
+  default = "raghu"
+}
+variable "ami-id" {
+  description = "This will assign the operating system"
+  type = string
+  default = "ami-02d7fd1c2af6eead0"
+}
+variable "itype" {
+  description = "This is for instance type"
+  type = string
+  default = "t2.micro"
+}
+variable "icount" {
+  description = "No.of instance"
+  type = number
+  default = 1
+}
+================================================================
+
+Creating two instance in two separate regions
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "RBU"
+  }
+}
+provider "aws" {
+  alias = "mumbai"
+  region = "ap-south-1"
+}
+resource "aws_instance" "two" {
+    provider = aws.mumbai
+  ami = "ami-026255a2746f88074"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "URB"
+  }
+}
+=====================================================
+
+Boolean variable with terra
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "RBU"
+  }
+  count = var.abc ? 2 : 1
+}
+variable "abc" {
+  type = bool
+  default = false
+}
+======================================
+Map variable with terra and printing ip address in console
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  tags = var.itag
+}
+variable "itag" {
+  type = map(string)
+  default = {
+    Name = "New-Inst"
+    Project = "devops"
+    Environment = "Dev"
+  }
+}
+output "two" {
+    value = [aws_instance.one.public_ip, aws_instance.one.private_ip, aws_instance.one.public_dns]
+  }
+============================================================
+creating instance with workspace name
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+ tags = {
+   Name = "${terraform.workspace}-instance"
+   Environment = "${terraform.workspace}"
+ }
+}
+output "two" {
+    value = [aws_instance.one.public_ip, aws_instance.one.private_ip, aws_instance.one.public_dns]
+  }
