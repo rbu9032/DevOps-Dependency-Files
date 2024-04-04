@@ -1,0 +1,159 @@
+local-exec
+----------
+
+provider "aws" {
+   region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "i-name"
+  }
+  provisioner "local-exec" {
+    command = "echo 'Instance is created with ID: ${aws_instance.one.id}' >> instance_id.txt"
+  }
+}
+=================================================================================================
+remote-exec
+-----------
+
+provider "aws" {
+   region = "us-east-1"
+}
+resource "aws_key_pair" "mykey" {
+  key_name = "xyz"
+  public_key = file("/root/.ssh/id_rsa.pub")
+}
+resource "aws_instance" "one" {
+  ami = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  key_name = aws_key_pair.mykey.key_name
+  tags = {
+    Name = "name-01"
+  }
+  provisioner "remote-exec" {
+    connection {
+      type = "ssh"
+      user = "ec2-user"
+      host = self.public_ip
+      private_key = file("/root/.ssh/id_rsa")
+    }
+    inline = [
+      "echo 'Welcome Raghav'",
+      "sudo yum install httpd -y",
+      "sudo systemctl start httpd"
+     ]
+  }
+}
+
+========================================================
+file
+----
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_key_pair" "mykey" {
+  key_name   = "xyz"
+  public_key = file("/root/.ssh/id_rsa.pub")
+}
+resource "aws_instance" "one" {
+  ami           = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  key_name      = aws_key_pair.mykey.key_name
+  tags = {
+    Name = "name-01"
+  }
+  provisioner "file" {
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      host        = self.public_ip
+      private_key = file("/root/.ssh/id_rsa")
+    }
+    source = "rbu.log"
+    destination = "rbu.log"
+  }
+}
+====================
+terraform TAINT is used to recreate the services
+------------------------------------------
+
+terraform taint aws_instance.label-name  and terraform apply
+
+updated version for TAINT :-  terraform apply --auto-approve -replace="aws_instance.label-name"
+=============================================
+terraform lifecycle
+--------------------
+
+disable destroy
+---------------
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami           = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "raghu"
+  }
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+ignore changes
+----------------
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami           = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "raghu"
+  }
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+create-before-destroy
+---------------------
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_instance" "one" {
+  ami           = "ami-0a699202e5027c10d"
+  instance_type = "t2.micro"
+  tags = {
+    Name = "modda"
+  }
+  lifecycle {
+     create_before_destroy = true
+  }
+}
+============================================
+dynamic blocks
+---------------
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_security_group" "sg-01" {
+  name        = "dynamic-sg"
+  description = "it has SSH, HTTPS, HTTP, MYSQL"
+  dynamic "ingress" {
+    for_each = var.ports
+    content {
+      from_port   = ingress.value
+      to_port     = ingress.value
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+}
+variable "ports" {
+  type    = list(any)
+  default = [22, 443, 80, 3306]
+}
+

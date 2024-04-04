@@ -1,0 +1,143 @@
+creating vpc, asg, lb and ec2 using terra
+
+
+provider.tf
+------------
+provider "aws" {
+  region = "us-east-1"
+}
+
+
+vpc.tf
+------
+resource "aws_vpc" "myvpc" {
+  tags = {
+    Name = "my-terra-vpc"
+  }
+  cidr_block = "10.0.0.0/16"
+  instance_tenancy = "default"
+  enable_dns_hostnames = "true"
+}
+
+subnet.tf
+---------
+resource "aws_subnet" "mysubnet-1" {
+  vpc_id = aws_vpc.myvpc.id
+  availability_zone = "us-east-1a"
+  tags = {
+    Name = "my-terra-subnet-1"
+  }
+  cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = "true"
+}
+resource "aws_subnet" "mysubnet-2" {
+  vpc_id = aws_vpc.myvpc.id
+  availability_zone = "us-east-1b"
+  tags = {
+    Name = "my-terra-subnet-2"
+  }
+  cidr_block = "10.0.2.0/24"
+  map_public_ip_on_launch = "true"
+}
+
+
+ig.tf
+-----
+resource "aws_internet_gateway" "myig" {
+  vpc_id = aws_vpc.myvpc.id
+  tags = {
+    Name = "my-terra-ig"
+  }
+}
+resource "aws_route_table_association" "subnet1" {
+  subnet_id = aws_subnet.mysubnet-1.id
+  route_table_id = aws_route_table.myrt.id
+}
+resource "aws_route_table_association" "subnet2" {
+  subnet_id = aws_subnet.mysubnet-2.id
+  route_table_id = aws_route_table.myrt.id
+}
+
+
+rt.tf
+-----
+resource "aws_route_table" "myrt" {
+  vpc_id = aws_vpc.myvpc.id
+  route  {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.myig.id
+  }
+  tags = {
+    Name = "my-terra-rt"
+  }
+}
+
+sg.tf
+-----
+resource "aws_security_group" "mysg" {
+  name = "my-terra-sg"
+  description = "it has ssh and all traffic"
+  vpc_id = aws_vpc.myvpc.id
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+
+main.tf
+------
+resource "aws_launch_configuration" "one" {
+  image_id = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  key_name = "key2"
+  security_groups = [aws_security_group.mysg.id]
+  user_data = <<-EOF
+  #!/bin/bash
+  sudo yum update -y
+  sudo yum install httpd -y
+  sudo systemctl start httpd
+  sudo systemctl enable httpd
+  sudo systemctl restart httpd
+  sudo chmod 766 /var/www/html/index.html
+  sudo echo "<html><body><h1>Welcome to Terraform Scaling.</h1></body></html>" >/var/www/html/index.html
+  EOF
+}
+resource "aws_elb" "myelb" {
+  name = "my-terra-elb"
+  security_groups = [aws_security_group.mysg.id]
+  subnets = [aws_subnet.mysubnet-1.id, aws_subnet.mysubnet-2.id]
+  listener {
+    instance_port = 80
+    instance_protocol = "http"
+    lb_port = 80
+    lb_protocol = "http"
+  }
+  tags = {
+    Name = "terra-lb"
+  }
+}
+resource "aws_autoscaling_group" "two" {
+  name = "my-terra-asg"
+  launch_configuration = aws_launch_configuration.one.name
+  min_size = 2
+  max_size = 3
+  desired_capacity = 2
+  health_check_type = "EC2"
+  load_balancers = [aws_elb.myelb.name]
+  vpc_zone_identifier = [aws_subnet.mysubnet-1.id, aws_subnet.mysubnet-2.id]
+}

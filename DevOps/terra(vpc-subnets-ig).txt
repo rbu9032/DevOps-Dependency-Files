@@ -1,0 +1,110 @@
+Creating VPC, subnets, Internet Gateways and Route Tables using Terraform
+
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_vpc" "one" {
+  tags = {
+    Name = "my-terra-vpc"
+  }
+  cidr_block = "10.0.0.0/16"
+  instance_tenancy = "default"
+  enable_dns_hostnames = "true"
+}
+resource "aws_subnet" "two" {
+  vpc_id = aws_vpc.one.id
+  tags = {
+    Name = "my-terra-subnet"
+  }
+  availability_zone = "us-east-1a"
+  cidr_block = "10.0.1.0/24"
+  map_public_ip_on_launch = "true"
+}
+resource "aws_internet_gateway" "three" {
+  tags = {
+    Name = "my-terra-igw"
+  }
+  vpc_id = aws_vpc.one.id
+}
+resource "aws_route_table" "four" {
+    vpc_id = aws_vpc.one.id
+    tags = {
+      Name = "my-terra-rt"
+    }
+   route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.three.id
+   }
+}
+
+===================================================
+
+Creating ec2 and vpc using terra
+
+provider "aws" {
+  region = "us-east-1"
+}
+resource "aws_vpc" "one" {
+  tags = {
+    Name = "my-terra-vpc"
+  }
+  cidr_block = "11.0.0.0/16"
+  instance_tenancy = "default"
+  enable_dns_hostnames = "true"
+}
+resource "aws_subnet" "two" {
+  vpc_id = aws_vpc.one.id
+  tags = {
+    Name = "my-terra-sn"
+  }
+  availability_zone = "us-east-1a"
+  cidr_block = "11.0.1.0/24"
+  map_public_ip_on_launch = "true"
+}
+resource "aws_internet_gateway" "three" {
+    tags = {
+      Name = "my-terra-IG"
+    }
+  vpc_id = aws_vpc.one.id
+}
+resource "aws_route_table" "four" {
+  vpc_id = aws_vpc.one.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.three.id
+  }
+}
+resource "aws_route_table_association" "five" {
+  subnet_id = aws_subnet.two.id
+  route_table_id = aws_route_table.four.id
+}
+resource "aws_security_group" "six" {
+  name = "my-terra-sg"
+  vpc_id = aws_vpc.one.id
+  ingress {
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress{
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress{
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+resource "aws_instance" "seven" {
+  ami = "ami-02d7fd1c2af6eead0"
+  instance_type = "t2.micro"
+  subnet_id = aws_subnet.two.id
+  vpc_security_group_ids = [aws_security_group.six.id]
+}
+
