@@ -1,0 +1,24 @@
+pipeline for monolithic project using terraform, ansible
+
+pipeline{
+    agent any
+    stages{
+        stage('Code'){
+            steps{
+                 git branch: 'main', url: 'https://github.com/rbu9032/devops18.git'
+            }
+        }
+        stage('Terraform'){
+            steps{
+                sh 'terraform init'
+                sh 'terraform plan'
+                sh 'terraform apply --auto-approve'
+            }
+        }
+        stage('Deployment'){
+            steps{
+                sh 'ansible-playbook -i /opt/ansible/inventory/aws_ec2.yml /var/lib/jenkins/workspace/Job-1/ansible/deployment.yml'
+            }
+        }
+    }
+}
